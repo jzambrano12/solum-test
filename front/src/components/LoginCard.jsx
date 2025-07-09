@@ -80,16 +80,6 @@ export function LoginCard() {
               Sign In
             </Button>
           </form>
-
-          {/* Forgot Password Link */}
-          <div className="text-center">
-            <button
-              type="button"
-              className="text-sm text-muted-foreground hover:text-primary transition-smooth underline-offset-4 hover:underline"
-            >
-              Forgot Password?
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
