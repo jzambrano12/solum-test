@@ -15,18 +15,17 @@ export function LoginCard() {
       <Card className="w-full max-w-md shadow-card">
         <CardHeader className="text-center space-y-6">
           {/* Logo Placeholder */}
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-16 h-16 bg-black/5 rounded-lg flex items-center justify-center">
               <Building2 className="w-8 h-8 text-primary" />
             </div>
+            <h1 className="text-2xl font-semibold tracking-tight text-black mt-4">
+              Solum QA
+            </h1>
           </div>
 
           {/* Company Name and Title */}
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              Solum QA
-            </h1>
-            <CardTitle className="text-xl">Sign In</CardTitle>
             <CardDescription>
               Enter your credentials to access your account
             </CardDescription>
