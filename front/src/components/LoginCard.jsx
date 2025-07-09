@@ -11,8 +11,8 @@ import {
 
 export function LoginCard() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md shadow-card">
+    <div className="min-h-screen flex items-center justify-center bg-black/5 px-4">
+      <Card className="w-full max-w-md shadow-card bg-white border-black/10">
         <CardHeader className="text-center space-y-6">
           {/* Logo Placeholder */}
           <div className="flex flex-col items-center justify-center">
@@ -75,7 +75,10 @@ export function LoginCard() {
             </div>
 
             {/* Sign In Button */}
-            <Button type="submit" className="w-full h-11 text-base font-medium">
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-medium transition-all duration-300 hover:bg-black/5"
+            >
               Sign In
             </Button>
           </form>
