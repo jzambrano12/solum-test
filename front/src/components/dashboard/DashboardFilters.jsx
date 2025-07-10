@@ -21,7 +21,7 @@ export const DashboardFilters = () => {
             <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Select company" />
             </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
+            <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Companies</SelectItem>
               <SelectItem value="clinic-a">Clinic A</SelectItem>
               <SelectItem value="clinic-b">Clinic B</SelectItem>
@@ -39,7 +39,7 @@ export const DashboardFilters = () => {
             <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Select agent" />
             </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
+            <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Agents</SelectItem>
               <SelectItem value="inbound-prod">Inbound - Prod</SelectItem>
               <SelectItem value="outbound-prod">Outbound - Prod</SelectItem>
@@ -58,7 +58,7 @@ export const DashboardFilters = () => {
             <SelectTrigger className="bg-background border-input">
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
-            <SelectContent className="bg-popover border-border">
+            <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="evaluated">Evaluated</SelectItem>

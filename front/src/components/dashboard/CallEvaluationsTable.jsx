@@ -1,7 +1,11 @@
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "./StatusBadge";
 import { Pagination } from "./Pagination";
+import { CallEvaluationModal } from "./CallEvaluationModal";
 
 // Mock data that matches the Supabase schema
 const mockCalls = [
@@ -50,9 +54,39 @@ const mockCalls = [
     durationInSeconds: 92,
     status: "pending",
   },
+  {
+    id: "6",
+    externalCallId: "call_112233",
+    company: "Clinic D",
+    agent: "Inbound - Prod",
+    callTimestamp: "2024-01-15T09:15:00Z",
+    durationInSeconds: 134,
+    status: "pending",
+  },
+  {
+    id: "7",
+    externalCallId: "call_445566",
+    company: "Clinic A",
+    agent: "Outbound - Prod",
+    callTimestamp: "2024-01-15T08:45:00Z",
+    durationInSeconds: 67,
+    status: "pending",
+  },
+  {
+    id: "8",
+    externalCallId: "call_778899",
+    company: "Clinic E",
+    agent: "Inbound - Dev",
+    callTimestamp: "2024-01-15T07:30:00Z",
+    durationInSeconds: 203,
+    status: "pending",
+  },
 ];
 
 export const CallEvaluationsTable = () => {
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const formatTimestamp = (timestamp) => {
     return new Date(timestamp).toLocaleString("en-US", {
       month: "short",
@@ -70,6 +104,16 @@ export const CallEvaluationsTable = () => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const handleEvaluateCall = (call) => {
+    setSelectedCall(call);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCall(null);
   };
 
   return (
@@ -121,9 +165,15 @@ export const CallEvaluationsTable = () => {
                   <td className="p-4">
                     <Button
                       size="sm"
-                      className="bg-primary hover:bg-primary-hover text-primary-foreground transition-colors duration-200"
+                      onClick={() => handleEvaluateCall(call)}
+                      disabled={call.status === "evaluated"}
+                      className={`transition-colors duration-200 ${
+                        call.status === "evaluated"
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-primary hover:bg-primary-hover text-primary-foreground"
+                      }`}
                     >
-                      Evaluate
+                      {call.status === "evaluated" ? "Evaluated" : "Evaluate"}
                     </Button>
                   </td>
                 </tr>
@@ -134,6 +184,13 @@ export const CallEvaluationsTable = () => {
       </Card>
 
       <Pagination />
+
+      {/* Evaluation Modal */}
+      <CallEvaluationModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        call={selectedCall}
+      />
     </div>
   );
 };
