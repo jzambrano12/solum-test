@@ -68,6 +68,8 @@ class CallEvaluationResponse(BaseModel):
     agent_name: str
     agent_type: str
     agent_environment: str
+    call_reason: Optional[str] = None
+    customer_name: Optional[str] = None
     evaluation_id: Optional[str] = None
     evaluation_type: Optional[str] = None
     score: Optional[float] = None
@@ -153,6 +155,39 @@ def get_call_status(call_id: str) -> str:
         # En caso de error, retornamos "pending" como default
         return "pending"
 
+def get_multiple_call_statuses(call_ids: List[str]) -> dict:
+    """
+    Obtener el status de múltiples llamadas de forma eficiente
+    """
+    try:
+        if not call_ids:
+            return {}
+        
+        # Crear filtro para múltiples call_ids
+        call_ids_filter = ",".join(call_ids)
+        params = {
+            "select": "call_id",
+            "call_id": f"in.({call_ids_filter})"
+        }
+        
+        evaluations = make_supabase_request("evaluations", params=params)
+        
+        # Crear set de call_ids que tienen evaluaciones
+        evaluated_call_ids = set()
+        for evaluation in evaluations:
+            evaluated_call_ids.add(evaluation["call_id"])
+        
+        # Crear diccionario con todos los estados
+        statuses = {}
+        for call_id in call_ids:
+            statuses[call_id] = "evaluated" if call_id in evaluated_call_ids else "pending"
+        
+        return statuses
+        
+    except Exception:
+        # En caso de error, retornamos "pending" para todas las llamadas
+        return {call_id: "pending" for call_id in call_ids}
+
 # Rutas
 @app.get("/")
 async def root():
@@ -168,7 +203,12 @@ async def get_calls(
     offset: Optional[int] = 0,
     agent_id: Optional[str] = None,
     call_status: Optional[str] = None,
-    status: Optional[str] = None  # Nuevo filtro para el status de evaluación
+    status: Optional[str] = None,  # Status de evaluación ('evaluated' o 'pending')
+    company_name: Optional[str] = None,
+    call_reason: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    evaluation_status: Optional[str] = None,
+    search: Optional[str] = None
 ):
     """
     Obtener todas las llamadas (calls) con filtros opcionales
@@ -179,14 +219,32 @@ async def get_calls(
         agent_id: Filtrar por ID del agente
         call_status: Filtrar por estado de la llamada
         status: Filtrar por estado de evaluación ('evaluated' o 'pending')
+        company_name: Filtrar por nombre de la compañía
+        call_reason: Filtrar por motivo de llamada
+        customer_name: Filtrar por nombre del cliente
+        evaluation_status: Filtrar por estado de evaluación ('evaluated' o 'pending')
+        search: Búsqueda por external_call_id
     """
     try:
+        # Determinar si necesitamos filtrar por evaluation_status
+        filter_status = status or evaluation_status
+        
+        # Si filtramos por evaluation_status, necesitamos obtener más datos inicialmente
+        if filter_status:
+            # Usar un límite mayor para obtener suficientes llamadas antes de filtrar
+            initial_limit = 1000  # Obtener más llamadas para filtrar
+            initial_offset = 0
+        else:
+            # Si no filtramos por evaluation_status, usar limit/offset normales
+            initial_limit = limit
+            initial_offset = offset
+        
         # Construir los parámetros de la consulta
         params = {
             "select": "*",
             "order": "call_timestamp.desc",
-            "limit": limit,
-            "offset": offset
+            "limit": initial_limit,
+            "offset": initial_offset
         }
         
         # Aplicar filtros si se proporcionan
@@ -194,53 +252,79 @@ async def get_calls(
             params["agent_id"] = f"eq.{agent_id}"
         if call_status:
             params["call_status"] = f"eq.{call_status}"
+        if call_reason:
+            params["call_reason"] = f"eq.{call_reason}"
+        if customer_name:
+            params["customer_name"] = f"ilike.%{customer_name}%"
+        if search:
+            params["external_call_id"] = f"ilike.%{search}%"
         
         # Ejecutar consulta
         calls_data = make_supabase_request("calls", params=params)
         
-        # Determinar el status de cada llamada basado en evaluaciones
+        # Determinar el status de todas las llamadas basado en evaluaciones de forma eficiente
+        call_ids = [call["id"] for call in calls_data]
+        call_statuses = get_multiple_call_statuses(call_ids)
+        
+        # Asignar el status a cada llamada
         processed_calls = []
         for call in calls_data:
-            call_status_eval = get_call_status(call["id"])
-            call["status"] = call_status_eval
+            call["status"] = call_statuses.get(call["id"], "pending")
             processed_calls.append(call)
         
         # Filtrar por status de evaluación si se especifica
-        if status:
-            processed_calls = [call for call in processed_calls if call["status"] == status]
-        
-        # Aplicar paginación después del filtrado si se filtró por status
-        if status:
+        if filter_status:
+            # Filtrar las llamadas según el status de evaluación
+            if filter_status == "evaluated":
+                processed_calls = [call for call in processed_calls if call["status"] == "evaluated"]
+            elif filter_status == "pending":
+                processed_calls = [call for call in processed_calls if call["status"] == "pending"]
+            
+            # Aplicar paginación después del filtrado
             total_filtered = len(processed_calls)
             processed_calls = processed_calls[offset:offset + limit]
+        else:
+            # Si no se filtró por evaluation_status, los datos ya están paginados correctamente
+            total_filtered = len(processed_calls)
         
         # Contar total de registros
-        count_params = {"select": "*"}
-        if agent_id:
-            count_params["agent_id"] = f"eq.{agent_id}"
-        if call_status:
-            count_params["call_status"] = f"eq.{call_status}"
-        
-        # Para obtener el conteo, necesitamos hacer una petición separada
-        count_response = requests.get(
-            f"{SUPABASE_REST_URL}/calls",
-            headers={**HEADERS, "Prefer": "count=exact"},
-            params=count_params
-        )
-        
-        total_count = 0
-        if count_response.status_code == 200:
-            # El conteo viene en el header Content-Range
-            content_range = count_response.headers.get("Content-Range", "")
-            if content_range:
-                # Formato: "0-99/243" donde 243 es el total
-                parts = content_range.split("/")
-                if len(parts) == 2:
-                    total_count = int(parts[1])
-        
-        # Si se filtró por status, usar el conteo filtrado
-        if status:
+        if filter_status:
+            # Si se filtró por evaluation_status, usar el conteo filtrado
             total_count = total_filtered
+        else:
+            # Si no se filtró por evaluation_status, hacer conteo normal
+            count_params = {"select": "*"}
+            if agent_id:
+                count_params["agent_id"] = f"eq.{agent_id}"
+            if call_status:
+                count_params["call_status"] = f"eq.{call_status}"
+            if call_reason:
+                count_params["call_reason"] = f"eq.{call_reason}"
+            if customer_name:
+                count_params["customer_name"] = f"ilike.%{customer_name}%"
+            if search:
+                count_params["external_call_id"] = f"ilike.%{search}%"
+            
+            # Para obtener el conteo, necesitamos hacer una petición separada
+            count_response = requests.get(
+                f"{SUPABASE_REST_URL}/calls",
+                headers={**HEADERS, "Prefer": "count=exact"},
+                params=count_params
+            )
+            
+            total_count = 0
+            if count_response.status_code == 200:
+                # El conteo viene en el header Content-Range
+                content_range = count_response.headers.get("Content-Range", "")
+                if content_range:
+                    # Formato: "0-99/243" donde 243 es el total
+                    parts = content_range.split("/")
+                    if len(parts) == 2:
+                        total_count = int(parts[1])
+            
+            # Si no se pudo obtener el conteo, usar el número de registros obtenidos
+            if total_count == 0:
+                total_count = len(processed_calls)
         
         return CallsListResponse(
             data=processed_calls,
@@ -286,6 +370,9 @@ async def get_call_evaluations(
     agent_type: Optional[str] = None,
     agent_environment: Optional[str] = None,
     evaluation_type: Optional[str] = None,
+    call_reason: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    evaluation_status: Optional[str] = None,
     search: Optional[str] = None
 ):
     """
@@ -299,12 +386,15 @@ async def get_call_evaluations(
         agent_type: Filtrar por tipo de agente ('inbound' o 'outbound')
         agent_environment: Filtrar por ambiente ('production' o 'development')
         evaluation_type: Filtrar por tipo de evaluación ('human' o 'llm')
+        call_reason: Filtrar por motivo de llamada
+        customer_name: Filtrar por nombre del cliente
+        evaluation_status: Filtrar por estado de evaluación ('evaluated' o 'pending')
         search: Búsqueda por external_call_id
     """
     try:
         # Construir los parámetros de la consulta
         params = {
-            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
+            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,call_reason,customer_name,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
             "order": "call_timestamp.desc",
             "limit": limit,
             "offset": offset
@@ -321,11 +411,22 @@ async def get_call_evaluations(
             params["agent_environment"] = f"eq.{agent_environment}"
         if evaluation_type:
             params["evaluation_type"] = f"eq.{evaluation_type}"
+        if call_reason:
+            params["call_reason"] = f"eq.{call_reason}"
+        if customer_name:
+            params["customer_name"] = f"ilike.%{customer_name}%"
         if search:
             params["external_call_id"] = f"ilike.%{search}%"
         
         # Ejecutar consulta en la vista
         data = make_supabase_request("call_evaluations_view", params=params)
+        
+        # Filtrar por evaluation_status si se especifica
+        if evaluation_status:
+            if evaluation_status == "evaluated":
+                data = [item for item in data if item.get("evaluation_id") is not None]
+            elif evaluation_status == "pending":
+                data = [item for item in data if item.get("evaluation_id") is None]
         
         # Contar total de registros
         count_params = {"select": "*"}
@@ -339,6 +440,10 @@ async def get_call_evaluations(
             count_params["agent_environment"] = f"eq.{agent_environment}"
         if evaluation_type:
             count_params["evaluation_type"] = f"eq.{evaluation_type}"
+        if call_reason:
+            count_params["call_reason"] = f"eq.{call_reason}"
+        if customer_name:
+            count_params["customer_name"] = f"ilike.%{customer_name}%"
         if search:
             count_params["external_call_id"] = f"ilike.%{search}%"
         
@@ -359,6 +464,10 @@ async def get_call_evaluations(
                 if len(parts) == 2:
                     total_count = int(parts[1])
         
+        # Si se filtró por evaluation_status, ajustar el conteo
+        if evaluation_status:
+            total_count = len(data)
+        
         return CallEvaluationsListResponse(
             data=data,
             count=total_count if total_count > 0 else len(data)
@@ -374,7 +483,7 @@ async def get_call_evaluation_by_id(call_id: str):
     """
     try:
         params = {
-            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
+            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,call_reason,customer_name,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
             "call_id": f"eq.{call_id}"
         }
         

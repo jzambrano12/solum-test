@@ -99,9 +99,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                   Agent ID
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
-                  Call Type
-                </th>
-                <th className="text-left p-4 font-medium text-foreground">
                   Call Timestamp
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
@@ -125,9 +122,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                     </td>
                     <td className="p-4 text-foreground font-medium">
                       {call.agent_id}
-                    </td>
-                    <td className="p-4 text-muted-foreground">
-                      {call.call_type || "N/A"}
                     </td>
                     <td className="p-4 text-muted-foreground">
                       {formatTimestamp(call.call_timestamp)}

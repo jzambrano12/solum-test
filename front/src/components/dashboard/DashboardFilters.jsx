@@ -14,8 +14,9 @@ import { Search } from "lucide-react";
 export const DashboardFilters = ({ onFiltersChange }) => {
   const [filters, setFilters] = useState({
     company_name: "",
-    agent_type: "",
-    agent_environment: "",
+    call_reason: "",
+    evaluation_status: "",
+    customer_name: "",
     search: "",
   });
 
@@ -39,19 +40,24 @@ export const DashboardFilters = ({ onFiltersChange }) => {
     handleFilterChange("search", value);
   };
 
+  const handleCustomerNameChange = (e) => {
+    const value = e.target.value;
+    handleFilterChange("customer_name", value);
+  };
+
   return (
     <div className="bg-card rounded-lg border border-border p-6 mb-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Company Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">
-            Filter by Company
+            By Company
           </label>
           <Select
             onValueChange={(value) => handleFilterChange("company_name", value)}
           >
             <SelectTrigger className="bg-background border-input">
-              <SelectValue placeholder="Select company" />
+              <SelectValue placeholder="All companies" />
             </SelectTrigger>
             <SelectContent className="bg-white border-border">
               <SelectItem value="all">All Companies</SelectItem>
@@ -62,47 +68,78 @@ export const DashboardFilters = ({ onFiltersChange }) => {
           </Select>
         </div>
 
-        {/* Agent Type Filter */}
+        {/* Call Reason Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">
-            Filter by Agent Type
+            Call Reason
           </label>
           <Select
-            onValueChange={(value) => handleFilterChange("agent_type", value)}
+            onValueChange={(value) => handleFilterChange("call_reason", value)}
           >
             <SelectTrigger className="bg-background border-input">
-              <SelectValue placeholder="Select agent type" />
+              <SelectValue placeholder="All reasons" />
             </SelectTrigger>
             <SelectContent className="bg-white border-border">
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="inbound">Inbound</SelectItem>
-              <SelectItem value="outbound">Outbound</SelectItem>
+              <SelectItem value="all">All Reasons</SelectItem>
+              <SelectItem value="APPOINTMENT_ADJUSTMENT">
+                Appointment Adjustment
+              </SelectItem>
+              <SelectItem value="MISSED_CALL">Missed Call</SelectItem>
+              <SelectItem value="LOOKING_FOR_SOMEONE">
+                Looking for someone
+              </SelectItem>
+              <SelectItem value="NEW_APPOINTMENT_EXISTING_CLIENT">
+                New appointment existing client
+              </SelectItem>
+              <SelectItem value="MISCALANEOUS">Miscellaneous</SelectItem>
+              <SelectItem value="BILLING">Billing</SelectItem>
+              <SelectItem value="GENERAL_INQUIRY">General Inquiry</SelectItem>
+              <SelectItem value="NEW_CLIENT_SPANISH">
+                New client Spanish
+              </SelectItem>
+              <SelectItem value="NEW_CLIENT_ENGLISH">
+                New client English
+              </SelectItem>
+              <SelectItem value="TIME_SENSITIVE">Time Sensitive</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Environment Filter */}
+        {/* Evaluation Status Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">
-            Filter by Environment
+            Evaluation Status
           </label>
           <Select
             onValueChange={(value) =>
-              handleFilterChange("agent_environment", value)
+              handleFilterChange("evaluation_status", value)
             }
           >
             <SelectTrigger className="bg-background border-input">
-              <SelectValue placeholder="Select environment" />
+              <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent className="bg-white border-border">
-              <SelectItem value="all">All Environments</SelectItem>
-              <SelectItem value="production">Production</SelectItem>
-              <SelectItem value="development">Development</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="evaluated">Evaluated</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Search */}
+        {/* Customer Name Filter */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Customer Name
+          </label>
+          <Input
+            placeholder="Search by customer name..."
+            className="bg-background border-input"
+            value={filters.customer_name}
+            onChange={handleCustomerNameChange}
+          />
+        </div>
+
+        {/* Search by External Call ID */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Search</label>
           <div className="relative">
