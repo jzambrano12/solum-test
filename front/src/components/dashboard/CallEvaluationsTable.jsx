@@ -41,13 +41,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
     return `${minutes}m ${remainingSeconds}s`;
   };
 
-  const getEvaluationStatus = (call) => {
-    if (call.evaluation_id) {
-      return "evaluated";
-    }
-    return "pending";
-  };
-
   const handleEvaluateCall = (call) => {
     setSelectedCall(call);
     setIsModalOpen(true);
@@ -103,10 +96,10 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                   External Call ID
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
-                  Company
+                  Agent ID
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
-                  Agent
+                  Call Type
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
                   Call Timestamp
@@ -121,10 +114,9 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
             </thead>
             <tbody className="bg-card">
               {calls.map((call) => {
-                const status = getEvaluationStatus(call);
                 return (
                   <tr
-                    key={call.call_id}
+                    key={call.id}
                     className="border-b border-border hover:bg-muted/50 hover:shadow-sm transition-all duration-200 cursor-pointer"
                     onClick={() => handleEvaluateCall(call)}
                   >
@@ -132,12 +124,11 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                       {call.external_call_id}
                     </td>
                     <td className="p-4 text-foreground font-medium">
-                      {call.company_name}
+                      {call.agent_id}
                     </td>
                     <td className="p-4 text-muted-foreground">
-                      {call.agent_name}
+                      {call.call_type || "N/A"}
                     </td>
-
                     <td className="p-4 text-muted-foreground">
                       {formatTimestamp(call.call_timestamp)}
                     </td>
@@ -145,7 +136,7 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                       {formatDuration(call.duration_seconds)}
                     </td>
                     <td className="p-4">
-                      <StatusBadge status={status} />
+                      <StatusBadge status={call.status} />
                     </td>
                   </tr>
                 );

@@ -46,10 +46,11 @@ class CallResponse(BaseModel):
     call_reason: Optional[str] = None
     customer_phone: Optional[str] = None
     customer_name: Optional[str] = None
-    call_status: Optional[str] = "completed"
+    call_status: Optional[str] = "completed"  # Status original de la llamada
     summary: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    status: str  # Status basado en si tiene evaluación: "evaluated" o "pending"
 
 class CallsListResponse(BaseModel):
     data: List[CallResponse]
@@ -132,6 +133,26 @@ def make_supabase_request(endpoint: str, method: str = "GET", params: Optional[d
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar Supabase: {str(e)}")
 
+def get_call_status(call_id: str) -> str:
+    """
+    Determinar el status de una llamada basado en si tiene evaluación
+    """
+    try:
+        params = {
+            "select": "id",
+            "call_id": f"eq.{call_id}",
+            "limit": 1
+        }
+        
+        evaluations = make_supabase_request("evaluations", params=params)
+        
+        # Si hay evaluaciones, el status es "evaluated", sino "pending"
+        return "evaluated" if evaluations else "pending"
+        
+    except Exception:
+        # En caso de error, retornamos "pending" como default
+        return "pending"
+
 # Rutas
 @app.get("/")
 async def root():
@@ -146,7 +167,8 @@ async def get_calls(
     limit: Optional[int] = 100,
     offset: Optional[int] = 0,
     agent_id: Optional[str] = None,
-    call_status: Optional[str] = None
+    call_status: Optional[str] = None,
+    status: Optional[str] = None  # Nuevo filtro para el status de evaluación
 ):
     """
     Obtener todas las llamadas (calls) con filtros opcionales
@@ -156,6 +178,7 @@ async def get_calls(
         offset: Número de registros a omitir para paginación (default: 0)
         agent_id: Filtrar por ID del agente
         call_status: Filtrar por estado de la llamada
+        status: Filtrar por estado de evaluación ('evaluated' o 'pending')
     """
     try:
         # Construir los parámetros de la consulta
@@ -173,7 +196,23 @@ async def get_calls(
             params["call_status"] = f"eq.{call_status}"
         
         # Ejecutar consulta
-        data = make_supabase_request("calls", params=params)
+        calls_data = make_supabase_request("calls", params=params)
+        
+        # Determinar el status de cada llamada basado en evaluaciones
+        processed_calls = []
+        for call in calls_data:
+            call_status_eval = get_call_status(call["id"])
+            call["status"] = call_status_eval
+            processed_calls.append(call)
+        
+        # Filtrar por status de evaluación si se especifica
+        if status:
+            processed_calls = [call for call in processed_calls if call["status"] == status]
+        
+        # Aplicar paginación después del filtrado si se filtró por status
+        if status:
+            total_filtered = len(processed_calls)
+            processed_calls = processed_calls[offset:offset + limit]
         
         # Contar total de registros
         count_params = {"select": "*"}
@@ -183,7 +222,6 @@ async def get_calls(
             count_params["call_status"] = f"eq.{call_status}"
         
         # Para obtener el conteo, necesitamos hacer una petición separada
-        # Supabase REST API no devuelve conteo automáticamente
         count_response = requests.get(
             f"{SUPABASE_REST_URL}/calls",
             headers={**HEADERS, "Prefer": "count=exact"},
@@ -200,9 +238,13 @@ async def get_calls(
                 if len(parts) == 2:
                     total_count = int(parts[1])
         
+        # Si se filtró por status, usar el conteo filtrado
+        if status:
+            total_count = total_filtered
+        
         return CallsListResponse(
-            data=data,
-            count=total_count if total_count > 0 else len(data)
+            data=processed_calls,
+            count=total_count if total_count > 0 else len(processed_calls)
         )
         
     except Exception as e:
@@ -224,7 +266,11 @@ async def get_call_by_id(call_id: str):
         if not data:
             raise HTTPException(status_code=404, detail="Llamada no encontrada")
         
-        return CallResponse(**data[0])
+        # Agregar el status basado en evaluaciones
+        call_data = data[0]
+        call_data["status"] = get_call_status(call_id)
+        
+        return CallResponse(**call_data)
         
     except HTTPException:
         raise

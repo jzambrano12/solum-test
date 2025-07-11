@@ -24,9 +24,7 @@ export const useCalls = (filters = {}) => {
           ...currentFilters,
         });
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/call-evaluations?${params}`
-        );
+        const response = await fetch(`${API_BASE_URL}/api/calls?${params}`);
 
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -48,9 +46,7 @@ export const useCalls = (filters = {}) => {
 
   const fetchCallById = useCallback(async (callId) => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/call-evaluations/${callId}`
-      );
+      const response = await fetch(`${API_BASE_URL}/api/calls/${callId}`);
 
       if (!response.ok) {
         throw new Error(`Error ${response.status}: ${response.statusText}`);
