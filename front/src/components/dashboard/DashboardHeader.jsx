@@ -55,7 +55,11 @@ export const DashboardHeader = () => {
           <nav className="flex items-center space-x-6">
             <Link href="/">
               <Button
-                variant={pathname === "/" ? "default" : "ghost"}
+                variant={
+                  pathname === "/" || pathname === "/dashboard"
+                    ? "default"
+                    : "ghost"
+                }
                 size="sm"
                 className="flex items-center gap-2"
               >
