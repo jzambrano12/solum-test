@@ -47,6 +47,10 @@ Thumbs.db
 docker-compose.yml
 docker-compose.override.yml
 
+# Keep root Dockerfiles for Railway
+!Dockerfile.backend
+!Dockerfile.frontend
+
 # Git
 .git/
 .gitignore
