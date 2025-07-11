@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEvaluations } from "@/hooks/use-evaluations";
+import { toast } from "sonner";
 
 export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
   // Custom hook for API calls
@@ -35,7 +36,6 @@ export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
   const [communicationScore, setCommunicationScore] = useState(5);
   const [professionalismScore, setProfessionalismScore] = useState(5);
   const [problemSolvingScore, setProblemSolvingScore] = useState(5);
-  const [successMessage, setSuccessMessage] = useState("");
 
   // State for existing evaluation data
   const [existingEvaluation, setExistingEvaluation] = useState(null);
@@ -75,15 +75,17 @@ export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
       if (response.ok) {
         const evaluationData = await response.json();
         setExistingEvaluation(evaluationData);
+      } else {
+        toast.error("Error al cargar los datos de evaluación");
       }
     } catch (err) {
       console.error("Error fetching evaluation data:", err);
+      toast.error("Error al cargar los datos de evaluación");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMessage("");
 
     try {
       const evaluationData = {
@@ -106,17 +108,14 @@ export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
       };
 
       await createEvaluation(evaluationData);
-      setSuccessMessage("Evaluación creada exitosamente");
+      toast.success("Evaluación creada exitosamente");
       console.log("Evaluation submitted:", evaluationData);
 
-      // Close modal after short delay to show success message
-      setTimeout(() => {
-        onClose();
-        setSuccessMessage("");
-      }, 1500);
+      // Close modal immediately
+      onClose();
     } catch (error) {
       console.error("Error submitting evaluation:", error);
-      // Error is handled by the hook
+      toast.error("Error al crear la evaluación. Por favor, intenta de nuevo.");
     }
   };
 
@@ -180,18 +179,6 @@ export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
         </DialogHeader>
 
         <div className="px-6 pb-6">
-          {/* Success and Error Messages */}
-          {successMessage && (
-            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-              {successMessage}
-            </div>
-          )}
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
-            </div>
-          )}
-
           {/* Call Information Section (Read-only, Compact) */}
           <Card className="p-4 mb-6 bg-gray-50">
             <h3 className="text-lg font-medium mb-3">Call Information</h3>

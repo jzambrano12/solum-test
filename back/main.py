@@ -151,7 +151,17 @@ def make_supabase_request(endpoint: str, method: str = "GET", params: Optional[d
             response = requests.request(method, url, headers=HEADERS, params=params, json=json_data)
         
         response.raise_for_status()
-        return response.json()
+        
+        # Manejar respuestas vacías o sin contenido JSON
+        if response.status_code == 204 or not response.content.strip():
+            return {}
+        
+        try:
+            return response.json()
+        except ValueError:
+            # Si no se puede parsear como JSON, retornar respuesta vacía
+            return {}
+            
     except requests.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar Supabase: {str(e)}")
 

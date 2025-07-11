@@ -160,7 +160,7 @@ const Analytics = () => {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={loading}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-white"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -171,7 +171,7 @@ const Analytics = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleExport}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-amber-50"
               >
                 <Download className="h-4 w-4" />
                 Export PDF
