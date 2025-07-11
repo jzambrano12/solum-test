@@ -1,8 +1,23 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 import uvicorn
+import requests
+import os
+
+# Configuración de Supabase
+SUPABASE_URL = "https://pwjunnsldyqhfrjxxvub.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3anVubnNsZHlxaGZyanh4dnViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwNjMxNzcsImV4cCI6MjA2NzYzOTE3N30.H2moTjJM60FVffF-uK8c9MNaVpkymuXH8Up1JYKnTn4"
+SUPABASE_REST_URL = f"{SUPABASE_URL}/rest/v1"
+
+# Headers para las peticiones a Supabase
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
 
 app = FastAPI(
     title="Solum Test API",
@@ -20,20 +35,102 @@ app.add_middleware(
 )
 
 # Modelos Pydantic
-class Item(BaseModel):
-    id: int
-    name: str
-    description: str
+class CallResponse(BaseModel):
+    id: str
+    external_call_id: str
+    agent_id: str
+    call_timestamp: datetime
+    duration_seconds: int
+    audio_url: Optional[str] = None
+    call_type: Optional[str] = None
+    call_reason: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_name: Optional[str] = None
+    call_status: Optional[str] = "completed"
+    summary: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
-class ItemCreate(BaseModel):
-    name: str
-    description: str
+class CallsListResponse(BaseModel):
+    data: List[CallResponse]
+    count: int
 
-# Base de datos simulada
-items_db = [
-    {"id": 1, "name": "Item 1", "description": "Primera descripción"},
-    {"id": 2, "name": "Item 2", "description": "Segunda descripción"},
-]
+# Nuevo modelo para la vista call_evaluations_view
+class CallEvaluationResponse(BaseModel):
+    call_id: str
+    external_call_id: str
+    call_timestamp: datetime
+    duration_seconds: int
+    audio_url: Optional[str] = None
+    summary: Optional[str] = None
+    company_name: str
+    agent_name: str
+    agent_type: str
+    agent_environment: str
+    evaluation_id: Optional[str] = None
+    evaluation_type: Optional[str] = None
+    score: Optional[float] = None
+    notes: Optional[str] = None
+    evaluator_name: Optional[str] = None
+    evaluator_email: Optional[str] = None
+    llm_model: Optional[str] = None
+    llm_confidence: Optional[float] = None
+    evaluation_created_at: Optional[datetime] = None
+    
+    # Campos adicionales no disponibles en la vista actual - los mantenemos para compatibilidad futura
+    communication_score: Optional[float] = None
+    professionalism_score: Optional[float] = None
+    problem_solving_score: Optional[float] = None
+    evaluation_duration_seconds: Optional[int] = None
+
+class CallEvaluationsListResponse(BaseModel):
+    data: List[CallEvaluationResponse]
+    count: int
+
+# Nuevo modelo para crear/actualizar evaluaciones
+class CallEvaluationCreate(BaseModel):
+    call_id: str
+    external_call_id: str
+    type: str  # 'human' or 'llm'
+    score: float
+    notes: Optional[str] = None
+    communication_score: Optional[float] = None
+    professionalism_score: Optional[float] = None
+    problem_solving_score: Optional[float] = None
+    evaluator_name: Optional[str] = None
+    evaluator_email: Optional[str] = None
+    llm_model: Optional[str] = None
+    llm_confidence: Optional[float] = None
+
+class CallEvaluationUpdate(BaseModel):
+    score: Optional[float] = None
+    notes: Optional[str] = None
+    communication_score: Optional[float] = None
+    professionalism_score: Optional[float] = None
+    problem_solving_score: Optional[float] = None
+    evaluator_name: Optional[str] = None
+    evaluator_email: Optional[str] = None
+    llm_model: Optional[str] = None
+    llm_confidence: Optional[float] = None
+
+def make_supabase_request(endpoint: str, method: str = "GET", params: Optional[dict] = None, json_data: Optional[dict] = None):
+    """Función auxiliar para hacer peticiones HTTP a Supabase"""
+    url = f"{SUPABASE_REST_URL}/{endpoint}"
+    
+    try:
+        if method == "GET":
+            response = requests.get(url, headers=HEADERS, params=params)
+        elif method == "POST":
+            response = requests.post(url, headers=HEADERS, json=json_data)
+        elif method == "PATCH":
+            response = requests.patch(url, headers=HEADERS, params=params, json=json_data)
+        else:
+            response = requests.request(method, url, headers=HEADERS, params=params, json=json_data)
+        
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Error al consultar Supabase: {str(e)}")
 
 # Rutas
 @app.get("/")
@@ -44,31 +141,285 @@ async def root():
 async def health_check():
     return {"status": "healthy", "service": "backend"}
 
-@app.get("/api/items", response_model=List[Item])
-async def get_items():
-    return items_db
+@app.get("/api/calls", response_model=CallsListResponse)
+async def get_calls(
+    limit: Optional[int] = 100,
+    offset: Optional[int] = 0,
+    agent_id: Optional[str] = None,
+    call_status: Optional[str] = None
+):
+    """
+    Obtener todas las llamadas (calls) con filtros opcionales
+    
+    Args:
+        limit: Número máximo de registros a retornar (default: 100)
+        offset: Número de registros a omitir para paginación (default: 0)
+        agent_id: Filtrar por ID del agente
+        call_status: Filtrar por estado de la llamada
+    """
+    try:
+        # Construir los parámetros de la consulta
+        params = {
+            "select": "*",
+            "order": "call_timestamp.desc",
+            "limit": limit,
+            "offset": offset
+        }
+        
+        # Aplicar filtros si se proporcionan
+        if agent_id:
+            params["agent_id"] = f"eq.{agent_id}"
+        if call_status:
+            params["call_status"] = f"eq.{call_status}"
+        
+        # Ejecutar consulta
+        data = make_supabase_request("calls", params=params)
+        
+        # Contar total de registros
+        count_params = {"select": "*"}
+        if agent_id:
+            count_params["agent_id"] = f"eq.{agent_id}"
+        if call_status:
+            count_params["call_status"] = f"eq.{call_status}"
+        
+        # Para obtener el conteo, necesitamos hacer una petición separada
+        # Supabase REST API no devuelve conteo automáticamente
+        count_response = requests.get(
+            f"{SUPABASE_REST_URL}/calls",
+            headers={**HEADERS, "Prefer": "count=exact"},
+            params=count_params
+        )
+        
+        total_count = 0
+        if count_response.status_code == 200:
+            # El conteo viene en el header Content-Range
+            content_range = count_response.headers.get("Content-Range", "")
+            if content_range:
+                # Formato: "0-99/243" donde 243 es el total
+                parts = content_range.split("/")
+                if len(parts) == 2:
+                    total_count = int(parts[1])
+        
+        return CallsListResponse(
+            data=data,
+            count=total_count if total_count > 0 else len(data)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener las llamadas: {str(e)}")
 
-@app.get("/api/items/{item_id}", response_model=Item)
-async def get_item(item_id: int):
-    for item in items_db:
-        if item["id"] == item_id:
-            return item
-    return {"error": "Item no encontrado"}
+@app.get("/api/calls/{call_id}", response_model=CallResponse)
+async def get_call_by_id(call_id: str):
+    """
+    Obtener una llamada específica por su ID
+    """
+    try:
+        params = {
+            "select": "*",
+            "id": f"eq.{call_id}"
+        }
+        
+        data = make_supabase_request("calls", params=params)
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="Llamada no encontrada")
+        
+        return CallResponse(**data[0])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener la llamada: {str(e)}")
 
-@app.post("/api/items", response_model=Item)
-async def create_item(item: ItemCreate):
-    new_id = max([item["id"] for item in items_db]) + 1
-    new_item = {"id": new_id, **item.dict()}
-    items_db.append(new_item)
-    return new_item
+@app.get("/api/call-evaluations", response_model=CallEvaluationsListResponse)
+async def get_call_evaluations(
+    limit: Optional[int] = 100,
+    offset: Optional[int] = 0,
+    company_name: Optional[str] = None,
+    agent_name: Optional[str] = None,
+    agent_type: Optional[str] = None,
+    agent_environment: Optional[str] = None,
+    evaluation_type: Optional[str] = None,
+    search: Optional[str] = None
+):
+    """
+    Obtener todas las evaluaciones de llamadas desde la vista call_evaluations_view
+    
+    Args:
+        limit: Número máximo de registros a retornar (default: 100)
+        offset: Número de registros a omitir para paginación (default: 0)
+        company_name: Filtrar por nombre de la compañía
+        agent_name: Filtrar por nombre del agente
+        agent_type: Filtrar por tipo de agente ('inbound' o 'outbound')
+        agent_environment: Filtrar por ambiente ('production' o 'development')
+        evaluation_type: Filtrar por tipo de evaluación ('human' o 'llm')
+        search: Búsqueda por external_call_id
+    """
+    try:
+        # Construir los parámetros de la consulta
+        params = {
+            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
+            "order": "call_timestamp.desc",
+            "limit": limit,
+            "offset": offset
+        }
+        
+        # Aplicar filtros si se proporcionan
+        if company_name:
+            params["company_name"] = f"eq.{company_name}"
+        if agent_name:
+            params["agent_name"] = f"eq.{agent_name}"
+        if agent_type:
+            params["agent_type"] = f"eq.{agent_type}"
+        if agent_environment:
+            params["agent_environment"] = f"eq.{agent_environment}"
+        if evaluation_type:
+            params["evaluation_type"] = f"eq.{evaluation_type}"
+        if search:
+            params["external_call_id"] = f"ilike.%{search}%"
+        
+        # Ejecutar consulta en la vista
+        data = make_supabase_request("call_evaluations_view", params=params)
+        
+        # Contar total de registros
+        count_params = {"select": "*"}
+        if company_name:
+            count_params["company_name"] = f"eq.{company_name}"
+        if agent_name:
+            count_params["agent_name"] = f"eq.{agent_name}"
+        if agent_type:
+            count_params["agent_type"] = f"eq.{agent_type}"
+        if agent_environment:
+            count_params["agent_environment"] = f"eq.{agent_environment}"
+        if evaluation_type:
+            count_params["evaluation_type"] = f"eq.{evaluation_type}"
+        if search:
+            count_params["external_call_id"] = f"ilike.%{search}%"
+        
+        # Para obtener el conteo, necesitamos hacer una petición separada
+        count_response = requests.get(
+            f"{SUPABASE_REST_URL}/call_evaluations_view",
+            headers={**HEADERS, "Prefer": "count=exact"},
+            params=count_params
+        )
+        
+        total_count = 0
+        if count_response.status_code == 200:
+            # El conteo viene en el header Content-Range
+            content_range = count_response.headers.get("Content-Range", "")
+            if content_range:
+                # Formato: "0-99/243" donde 243 es el total
+                parts = content_range.split("/")
+                if len(parts) == 2:
+                    total_count = int(parts[1])
+        
+        return CallEvaluationsListResponse(
+            data=data,
+            count=total_count if total_count > 0 else len(data)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener las evaluaciones: {str(e)}")
 
-@app.delete("/api/items/{item_id}")
-async def delete_item(item_id: int):
-    for i, item in enumerate(items_db):
-        if item["id"] == item_id:
-            deleted_item = items_db.pop(i)
-            return {"message": "Item eliminado", "item": deleted_item}
-    return {"error": "Item no encontrado"}
+@app.get("/api/call-evaluations/{call_id}", response_model=CallEvaluationResponse)
+async def get_call_evaluation_by_id(call_id: str):
+    """
+    Obtener una evaluación de llamada específica por su call_id
+    """
+    try:
+        params = {
+            "select": "call_id,external_call_id,call_timestamp,duration_seconds,audio_url,summary,company_name,agent_name,agent_type,agent_environment,evaluation_id,evaluation_type,score,notes,evaluator_name,evaluator_email,llm_model,llm_confidence,evaluation_created_at",
+            "call_id": f"eq.{call_id}"
+        }
+        
+        data = make_supabase_request("call_evaluations_view", params=params)
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="Evaluación de llamada no encontrada")
+        
+        return CallEvaluationResponse(**data[0])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener la evaluación: {str(e)}")
+
+@app.post("/api/evaluations", response_model=dict)
+async def create_evaluation(evaluation: CallEvaluationCreate):
+    """
+    Crear una nueva evaluación para una llamada
+    """
+    try:
+        # Preparar los datos para insertar en la tabla evaluations
+        evaluation_data = {
+            "call_id": evaluation.call_id,
+            "type": evaluation.type,
+            "score": evaluation.score,
+            "notes": evaluation.notes,
+            "communication_score": evaluation.communication_score,
+            "professionalism_score": evaluation.professionalism_score,
+            "problem_solving_score": evaluation.problem_solving_score,
+            "evaluator_name": evaluation.evaluator_name,
+            "evaluator_email": evaluation.evaluator_email,
+            "llm_model": evaluation.llm_model,
+            "llm_confidence": evaluation.llm_confidence,
+        }
+        
+        # Remover campos None para no enviarlos a Supabase
+        evaluation_data = {k: v for k, v in evaluation_data.items() if v is not None}
+        
+        # Crear la evaluación
+        data = make_supabase_request("evaluations", method="POST", json_data=evaluation_data)
+        
+        return {"message": "Evaluación creada exitosamente", "data": data}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear la evaluación: {str(e)}")
+
+@app.patch("/api/evaluations/{evaluation_id}", response_model=dict)
+async def update_evaluation(evaluation_id: str, evaluation: CallEvaluationUpdate):
+    """
+    Actualizar una evaluación existente
+    """
+    try:
+        # Preparar los datos para actualizar
+        update_data = {}
+        
+        if evaluation.score is not None:
+            update_data["score"] = evaluation.score
+        if evaluation.notes is not None:
+            update_data["notes"] = evaluation.notes
+        if evaluation.communication_score is not None:
+            update_data["communication_score"] = evaluation.communication_score
+        if evaluation.professionalism_score is not None:
+            update_data["professionalism_score"] = evaluation.professionalism_score
+        if evaluation.problem_solving_score is not None:
+            update_data["problem_solving_score"] = evaluation.problem_solving_score
+        if evaluation.evaluator_name is not None:
+            update_data["evaluator_name"] = evaluation.evaluator_name
+        if evaluation.evaluator_email is not None:
+            update_data["evaluator_email"] = evaluation.evaluator_email
+        if evaluation.llm_model is not None:
+            update_data["llm_model"] = evaluation.llm_model
+        if evaluation.llm_confidence is not None:
+            update_data["llm_confidence"] = evaluation.llm_confidence
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+        
+        # Agregar timestamp de actualización
+        update_data["updated_at"] = datetime.utcnow().isoformat()
+        
+        # Actualizar la evaluación
+        params = {"id": f"eq.{evaluation_id}"}
+        data = make_supabase_request("evaluations", method="PATCH", params=params, json_data=update_data)
+        
+        return {"message": "Evaluación actualizada exitosamente", "data": data}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar la evaluación: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True) 

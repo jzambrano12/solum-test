@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 
 export const StatusBadge = ({ status, className }) => {
   const variants = {
-    pending: "bg-warning text-warning-foreground",
-    evaluated: "bg-success text-success-foreground",
+    pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+    evaluated: "bg-green-100 text-green-800 border border-green-200",
   };
 
   const labels = {

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 import { CallEvaluationsTable } from "@/components/dashboard/CallEvaluationsTable";
@@ -6,6 +9,12 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 export const dynamic = "force-dynamic";
 
 const Index = () => {
+  const [filters, setFilters] = useState({});
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
   return (
     <AuthGuard requireAuth={true}>
       <div className="min-h-screen bg-background">
@@ -21,8 +30,8 @@ const Index = () => {
             </p>
           </div>
 
-          <DashboardFilters />
-          <CallEvaluationsTable />
+          <DashboardFilters onFiltersChange={handleFiltersChange} />
+          <CallEvaluationsTable filters={filters} />
         </main>
       </div>
     </AuthGuard>
