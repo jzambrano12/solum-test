@@ -108,7 +108,7 @@ export const DashboardFilters = ({ onFiltersChange }) => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search by call ID..."
+              placeholder="Search by external call ID..."
               className="pl-10 bg-background border-input"
               value={filters.search}
               onChange={handleSearchChange}

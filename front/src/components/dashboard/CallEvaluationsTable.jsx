@@ -48,10 +48,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
     return "pending";
   };
 
-  const getAgentDisplayName = (call) => {
-    return `${call.agent_name} (${call.agent_type} - ${call.agent_environment})`;
-  };
-
   const handleEvaluateCall = (call) => {
     setSelectedCall(call);
     setIsModalOpen(true);
@@ -104,7 +100,7 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
             <thead className="bg-muted/50">
               <tr className="border-b border-border">
                 <th className="text-left p-4 font-medium text-foreground">
-                  Call ID
+                  External Call ID
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
                   Company
@@ -120,9 +116,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                 </th>
                 <th className="text-left p-4 font-medium text-foreground">
                   Status
-                </th>
-                <th className="text-left p-4 font-medium text-foreground">
-                  Score
                 </th>
               </tr>
             </thead>
@@ -142,7 +135,7 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                       {call.company_name}
                     </td>
                     <td className="p-4 text-muted-foreground">
-                      {getAgentDisplayName(call)}
+                      {call.agent_name}
                     </td>
 
                     <td className="p-4 text-muted-foreground">
@@ -153,23 +146,6 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
                     </td>
                     <td className="p-4">
                       <StatusBadge status={status} />
-                    </td>
-                    <td className="p-4 text-muted-foreground">
-                      {call.score ? (
-                        <span
-                          className={`font-medium ${
-                            call.score >= 8
-                              ? "text-green-600"
-                              : call.score >= 6
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {call.score}/10
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
                     </td>
                   </tr>
                 );
