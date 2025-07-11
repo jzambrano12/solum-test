@@ -40,7 +40,7 @@ export const DashboardHeader = () => {
   };
 
   return (
-    <header className="bg-card border-b border-border">
+    <header className="bg-white/90 border-b border-border">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo and Navigation */}
         <div className="flex items-center space-x-8">

@@ -87,7 +87,7 @@ export const CallEvaluationsTable = ({ filters = {} }) => {
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden border-border">
+      <Card className="overflow-hidden border-border bg-white/90">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">

@@ -68,7 +68,7 @@ export const DashboardFilters = ({ onFiltersChange }) => {
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border p-6 mb-6">
+    <div className="bg-white/90 rounded-lg border border-border p-6 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Company Filter */}
         <div className="space-y-2">
