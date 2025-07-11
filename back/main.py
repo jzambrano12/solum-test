@@ -116,6 +116,26 @@ class CallEvaluationUpdate(BaseModel):
     llm_model: Optional[str] = None
     llm_confidence: Optional[float] = None
 
+# Nuevo modelo para la vista performance_metrics_view
+class PerformanceMetricsResponse(BaseModel):
+    company_name: str
+    agent_name: str
+    agent_type: str
+    agent_environment: str
+    total_calls: int
+    evaluated_calls: int
+    avg_score: Optional[float] = None
+    high_quality_calls: int
+    medium_quality_calls: int
+    low_quality_calls: int
+    high_quality_percentage: Optional[float] = None
+    medium_quality_percentage: Optional[float] = None
+    low_quality_percentage: Optional[float] = None
+
+class PerformanceMetricsListResponse(BaseModel):
+    data: List[PerformanceMetricsResponse]
+    count: int
+
 def make_supabase_request(endpoint: str, method: str = "GET", params: Optional[dict] = None, json_data: Optional[dict] = None):
     """Función auxiliar para hacer peticiones HTTP a Supabase"""
     url = f"{SUPABASE_REST_URL}/{endpoint}"
@@ -575,6 +595,84 @@ async def update_evaluation(evaluation_id: str, evaluation: CallEvaluationUpdate
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar la evaluación: {str(e)}")
+
+@app.get("/api/performance-metrics", response_model=PerformanceMetricsListResponse)
+async def get_performance_metrics(
+    limit: Optional[int] = 100,
+    offset: Optional[int] = 0,
+    company_name: Optional[str] = None,
+    agent_name: Optional[str] = None,
+    agent_type: Optional[str] = None,
+    agent_environment: Optional[str] = None
+):
+    """
+    Obtener métricas de rendimiento desde la vista performance_metrics_view
+    
+    Args:
+        limit: Número máximo de registros a retornar (default: 100)
+        offset: Número de registros a omitir para paginación (default: 0)
+        company_name: Filtrar por nombre de la compañía
+        agent_name: Filtrar por nombre del agente
+        agent_type: Filtrar por tipo de agente ('inbound' o 'outbound')
+        agent_environment: Filtrar por ambiente ('production' o 'development')
+    """
+    try:
+        # Construir los parámetros de la consulta
+        params = {
+            "select": "company_name,agent_name,agent_type,agent_environment,total_calls,evaluated_calls,avg_score,high_quality_calls,medium_quality_calls,low_quality_calls,high_quality_percentage,medium_quality_percentage,low_quality_percentage",
+            "order": "company_name.asc,agent_name.asc",
+            "limit": limit,
+            "offset": offset
+        }
+        
+        # Aplicar filtros si se proporcionan
+        if company_name:
+            params["company_name"] = f"eq.{company_name}"
+        if agent_name:
+            params["agent_name"] = f"eq.{agent_name}"
+        if agent_type:
+            params["agent_type"] = f"eq.{agent_type}"
+        if agent_environment:
+            params["agent_environment"] = f"eq.{agent_environment}"
+        
+        # Ejecutar consulta en la vista
+        data = make_supabase_request("performance_metrics_view", params=params)
+        
+        # Contar total de registros
+        count_params = {"select": "*"}
+        if company_name:
+            count_params["company_name"] = f"eq.{company_name}"
+        if agent_name:
+            count_params["agent_name"] = f"eq.{agent_name}"
+        if agent_type:
+            count_params["agent_type"] = f"eq.{agent_type}"
+        if agent_environment:
+            count_params["agent_environment"] = f"eq.{agent_environment}"
+        
+        # Para obtener el conteo, necesitamos hacer una petición separada
+        count_response = requests.get(
+            f"{SUPABASE_REST_URL}/performance_metrics_view",
+            headers={**HEADERS, "Prefer": "count=exact"},
+            params=count_params
+        )
+        
+        total_count = 0
+        if count_response.status_code == 200:
+            # El conteo viene en el header Content-Range
+            content_range = count_response.headers.get("Content-Range", "")
+            if content_range:
+                # Formato: "0-99/243" donde 243 es el total
+                parts = content_range.split("/")
+                if len(parts) == 2:
+                    total_count = int(parts[1])
+        
+        return PerformanceMetricsListResponse(
+            data=data,
+            count=total_count if total_count > 0 else len(data)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener las métricas de rendimiento: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True) 

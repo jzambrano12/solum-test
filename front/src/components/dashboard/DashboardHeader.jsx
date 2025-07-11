@@ -44,22 +44,17 @@ export const DashboardHeader = () => {
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo and Navigation */}
         <div className="flex items-center space-x-8">
-          <button
-            className="flex items-center space-x-3 cursor-pointer"
-            onClick={() => router.push("/")}
-          >
-            <h1 className="text-xl font-semibold text-foreground">Solum QA</h1>
-          </button>
+          <Link href="/dashboard">
+            <h1 className="text-xl font-semibold text-foreground cursor-pointer">
+              Solum QA
+            </h1>
+          </Link>
 
           {/* Navigation Links */}
           <nav className="flex items-center space-x-6">
-            <Link href="/">
+            <Link href="/dashboard">
               <Button
-                variant={
-                  pathname === "/" || pathname === "/dashboard"
-                    ? "default"
-                    : "ghost"
-                }
+                variant={pathname === "/dashboard" ? "default" : "ghost"}
                 size="sm"
                 className="flex items-center gap-2"
               >

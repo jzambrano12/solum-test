@@ -159,3 +159,193 @@ audio::-webkit-media-controls-play-button {
 .evaluation-form::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Print styles for PDF export */
+@media print {
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 0.5in;
+  }
+
+  /* Hide elements that shouldn't be printed */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Body adjustments */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Container adjustments */
+  .container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Header adjustments */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+  }
+
+  /* Card adjustments */
+  .card,
+  [class*="card"] {
+    background: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 15px !important;
+    padding: 10px !important;
+  }
+
+  /* Grid adjustments */
+  .grid {
+    display: block !important;
+  }
+
+  .grid > * {
+    width: 100% !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Metrics cards - show in 2 columns for better space usage */
+  .metrics-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Table adjustments */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ddd !important;
+    padding: 4px !important;
+    text-align: left !important;
+  }
+
+  th {
+    background: #f5f5f5 !important;
+    font-weight: bold !important;
+  }
+
+  /* Text adjustments */
+  h1 {
+    font-size: 18px !important;
+    margin-bottom: 10px !important;
+  }
+
+  h2 {
+    font-size: 16px !important;
+    margin-bottom: 8px !important;
+  }
+
+  h3 {
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Button and interactive elements */
+  button,
+  .button {
+    display: none !important;
+  }
+
+  /* Show export info */
+  .print-info {
+    display: block !important;
+    text-align: center;
+    font-size: 10px !important;
+    color: #666 !important;
+    margin-top: 20px !important;
+  }
+
+  /* Progress bars adjustments */
+  .progress-bar {
+    border: 1px solid #ddd !important;
+    background: #f5f5f5 !important;
+  }
+
+  .progress-bar > div {
+    background: #666 !important;
+  }
+
+  /* Quality distribution colors for print */
+  .quality-high {
+    background: #d4edda !important;
+  }
+  .quality-medium {
+    background: #fff3cd !important;
+  }
+  .quality-low {
+    background: #f8d7da !important;
+  }
+
+  /* Ensure proper page breaks */
+  .page-break {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Rankings adjustments */
+  .ranking-item {
+    border-bottom: 1px solid #eee !important;
+    padding: 5px 0 !important;
+  }
+
+  /* Company metrics adjustments */
+  .company-item {
+    border-bottom: 1px solid #eee !important;
+    padding: 8px 0 !important;
+  }
+
+  /* Hide background patterns */
+  .bg-pattern,
+  [class*="bg-pattern"] {
+    background: none !important;
+  }
+
+  /* Ensure text is visible */
+  .text-muted-foreground {
+    color: #666 !important;
+  }
+
+  .text-foreground {
+    color: #000 !important;
+  }
+
+  /* Icon adjustments */
+  svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+}
+
+/* Print-specific utility classes */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block !important;
+  }
+}
