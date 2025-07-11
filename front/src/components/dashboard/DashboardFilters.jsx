@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,6 +20,10 @@ export const DashboardFilters = ({ onFiltersChange }) => {
     search: "",
   });
 
+  // Estados locales para los inputs con debounce
+  const [localCustomerName, setLocalCustomerName] = useState("");
+  const [localSearch, setLocalSearch] = useState("");
+
   const handleFilterChange = (key, value) => {
     const newFilters = {
       ...filters,
@@ -35,14 +39,32 @@ export const DashboardFilters = ({ onFiltersChange }) => {
     onFiltersChange(activeFilters);
   };
 
+  // Debounce para customer name
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFilterChange("customer_name", localCustomerName);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [localCustomerName]);
+
+  // Debounce para search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFilterChange("search", localSearch);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
   const handleSearchChange = (e) => {
     const value = e.target.value;
-    handleFilterChange("search", value);
+    setLocalSearch(value);
   };
 
   const handleCustomerNameChange = (e) => {
     const value = e.target.value;
-    handleFilterChange("customer_name", value);
+    setLocalCustomerName(value);
   };
 
   return (
@@ -134,7 +156,7 @@ export const DashboardFilters = ({ onFiltersChange }) => {
           <Input
             placeholder="Search by customer name..."
             className="bg-background border-input"
-            value={filters.customer_name}
+            value={localCustomerName}
             onChange={handleCustomerNameChange}
           />
         </div>
@@ -147,7 +169,7 @@ export const DashboardFilters = ({ onFiltersChange }) => {
             <Input
               placeholder="Search by external call ID..."
               className="pl-10 bg-background border-input"
-              value={filters.search}
+              value={localSearch}
               onChange={handleSearchChange}
             />
           </div>
