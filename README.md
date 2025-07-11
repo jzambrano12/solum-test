@@ -107,9 +107,9 @@ npm run dev
 Una vez iniciado el proyecto:
 
 - **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
+- **Backend**: https://solum-test-back.up.railway.app
+- **API Docs**: https://solum-test-back.up.railway.app/docs
+- **Health Check**: https://solum-test-back.up.railway.app/health
 
 ## 📁 Estructura del Proyecto
 
@@ -209,7 +209,7 @@ docker run -p 3000:3000 solum-frontend
 4. **Probar**:
 
    - Frontend: http://localhost:3000
-   - API: http://localhost:8000/docs
+   - API: https://solum-test-back.up.railway.app/docs
 
 5. **Construir para producción**:
    ```bash
@@ -248,7 +248,7 @@ SECRET_KEY=tu-clave-secreta
 **Frontend (.env.local en front/):**
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=https://solum-test-back.up.railway.app
 ```
 
 ## 📝 Scripts Disponibles

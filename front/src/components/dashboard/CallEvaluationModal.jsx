@@ -68,7 +68,8 @@ export const CallEvaluationModal = ({ isOpen, onClose, call }) => {
       // Call the call-evaluations endpoint to get evaluation details
       const response = await fetch(
         `${
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+          process.env.NEXT_PUBLIC_API_URL ||
+          "https://solum-test-back.up.railway.app"
         }/api/call-evaluations/${call.id}`
       );
 

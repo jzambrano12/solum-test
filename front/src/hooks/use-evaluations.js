@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://solum-test-back.up.railway.app";
 
 export const useEvaluations = () => {
   const [isLoading, setIsLoading] = useState(false);
